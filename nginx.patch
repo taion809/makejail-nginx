@@ -1,0 +1,62 @@
+--- nginx.old	2012-11-14 01:27:14.000000000 -0800
++++ nginx	2012-11-14 02:31:45.000000000 -0800
+@@ -10,6 +10,8 @@
+ 
+ # Author: Sergey Budnevitch <sb@nginx.com>
+ 
++CHRDIR=/var/chroot/nginx
++
+ PATH=/sbin:/usr/sbin:/bin:/usr/bin
+ DESC=nginx
+ NAME=nginx
+@@ -29,7 +31,8 @@
+ 
+ do_start()
+ {
+-    start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
++    mount -t proc proc $CHRDIR/proc
++    start-stop-daemon --start --pidfile $PIDFILE --exec $DAEMON --chroot $CHRDIR -- \
+         $DAEMON_ARGS
+     RETVAL="$?"
+     return "$RETVAL"
+@@ -42,15 +45,17 @@
+     #   1 if daemon was already stopped
+     #   2 if daemon could not be stopped
+     #   other if a failure occurred
+-    start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME
++    start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile "$CHRDIR/$PIDFILE" --name $NAME
+     RETVAL="$?"
+-    rm -f $PIDFILE
++    rm -f "$CHRDIR/$PIDFILE"
++    umount $CHRDIR/proc
+     return "$RETVAL"
+ }
+ 
+ do_reload() {
+     #
+-    start-stop-daemon --stop --signal HUP --quiet --pidfile $PIDFILE --name $NAME
++    echo -n "Reloading: $NAME"
++    start-stop-daemon --stop --signal HUP --quiet --pidfile "$CHRDIR/$PIDFILE" --name $NAME
+     RETVAL="$?"
+     return "$RETVAL"
+ }
+@@ -72,15 +77,16 @@
+ }
+ 
+ do_upgrade() {
+-    OLDBINPIDFILE=$PIDFILE.oldbin
++    OLDBINPIDFILE=$CHRDIR/$PIDFILE.oldbin
+ 
+     do_configtest -q || return 6
+-    start-stop-daemon --stop --signal USR2 --quiet --pidfile $PIDFILE --name $NAME
++    start-stop-daemon --stop --signal USR2 --quiet --pidfile "$CHRDIR/$PIDFILE" --name $NAME
+     RETVAL="$?"
+     sleep 1
+-    if [ -f $OLDBINPIDFILE -a -f $PIDFILE ]; then
++    if [ -f $OLDBINPIDFILE -a -f $CHRDIR/$PIDFILE ]; then
+         start-stop-daemon --stop --signal QUIT --quiet --pidfile $OLDBINPIDFILE --name $NAME
+         RETVAL="$?"
++	umount $CHRDIR/proc
+     else
+         echo $"Upgrade failed!"
+         RETVAL=1
