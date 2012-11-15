@@ -12,7 +12,7 @@ If you download it, the easiest place to put it is in the makejail directory
 	
 	cd /etc/makejail
 	
-	makejail nginx.py
+	sudo makejail nginx.py
 
 After that you will need to edit your nginx script inside of /etc/init.d/
 I have provided a patchfile for convenience (this is for the nginx 1.2.5 release on squeeze provided by nginx.org)
